@@ -1,8 +1,9 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
-import { Contact, Phone, Address, Contacts } from "xero-node";
+import { Contact, Address, Contacts } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
+import { PhoneTypeName, toPhoneType } from "../helpers/to-phone-type.js";
 
 async function updateContact(
   name: string,
@@ -12,6 +13,7 @@ async function updateContact(
   phone: string | undefined,
   address: Address | undefined,
   contactId: string,
+  phoneType: PhoneTypeName | undefined,
 ): Promise<Contact | undefined> {
   await xeroClient.authenticate();
 
@@ -24,7 +26,7 @@ async function updateContact(
       ? [
           {
             phoneNumber: phone,
-            phoneType: Phone.PhoneTypeEnum.MOBILE,
+            phoneType: toPhoneType(phoneType),
           },
         ]
       : undefined,
@@ -70,6 +72,7 @@ export async function updateXeroContact(
   email?: string,
   phone?: string,
   address?: Address,
+  phoneType?: PhoneTypeName,
 ): Promise<XeroClientResponse<Contact>> {
   try {
     const updatedContact = await updateContact(
@@ -80,6 +83,7 @@ export async function updateXeroContact(
       phone,
       address,
       contactId,
+      phoneType,
     );
 
     if (!updatedContact) {

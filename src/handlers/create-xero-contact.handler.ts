@@ -1,13 +1,15 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
-import { Contact, Phone } from "xero-node";
+import { Contact } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
+import { PhoneTypeName, toPhoneType } from "../helpers/to-phone-type.js";
 
 async function createContact(
   name: string,
   email?: string,
   phone?: string,
+  phoneType?: PhoneTypeName,
 ): Promise<Contact | undefined> {
   await xeroClient.authenticate();
 
@@ -18,7 +20,7 @@ async function createContact(
       ? [
           {
             phoneNumber: phone,
-            phoneType: Phone.PhoneTypeEnum.MOBILE,
+            phoneType: toPhoneType(phoneType),
           },
         ]
       : undefined,
@@ -44,9 +46,10 @@ export async function createXeroContact(
   name: string,
   email?: string,
   phone?: string,
+  phoneType?: PhoneTypeName,
 ): Promise<XeroClientResponse<Contact>> {
   try {
-    const createdContact = await createContact(name, email, phone);
+    const createdContact = await createContact(name, email, phone, phoneType);
 
     if (!createdContact) {
       throw new Error("Contact creation failed.");

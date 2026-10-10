@@ -17,6 +17,13 @@ const UpdateContactTool = CreateXeroTool(
     lastName: z.string().optional(),
     email: z.string().email().optional(),
     phone: z.string().optional(),
+    phoneType: z
+      .enum(["DEFAULT", "MOBILE", "DDI", "FAX"])
+      .optional()
+      .describe(
+        "Which phone the number is stored as. Defaults to DEFAULT, which is the \
+one Xero shows on the invoice and on the contact panel.",
+      ),
     address: z
       .object({
         addressLine1: z.string(),
@@ -36,6 +43,7 @@ const UpdateContactTool = CreateXeroTool(
     email,
     phone,
     address,
+    phoneType,
   }: {
     contactId: string;
     name: string;
@@ -51,6 +59,7 @@ const UpdateContactTool = CreateXeroTool(
     };
     firstName?: string;
     lastName?: string;
+    phoneType?: "DEFAULT" | "MOBILE" | "DDI" | "FAX";
   }) => {
     try {
       const response = await updateXeroContact(
@@ -61,6 +70,7 @@ const UpdateContactTool = CreateXeroTool(
         email,
         phone,
         address,
+        phoneType,
       );
       if (response.isError) {
         return {

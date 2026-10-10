@@ -10,10 +10,18 @@ const ListContactsTool = CreateXeroTool(
       If not provided, the first page will be returned. If 100 contacts are returned, \
       call this tool again with the next page number."),
     searchTerm: z.string().optional().describe("Search parameter that performs a case-insensitive text search across the Name, FirstName, LastName, ContactNumber and EmailAddress fields"),
+    includeDetails: z
+      .boolean()
+      .optional()
+      .describe(
+        "Set true to return the full contact records. Xero's default summary \
+view leaves out phones and addresses, so a contact can look as though it has no \
+phone number when it does. Slower, so use it when those fields matter.",
+      ),
   },
   async (params) => {
-    const { page, searchTerm } = params;
-    const response = await listXeroContacts(page, searchTerm);
+    const { page, searchTerm, includeDetails } = params;
+    const response = await listXeroContacts(page, searchTerm, includeDetails);
 
     if (response.isError) {
       return {
@@ -44,6 +52,17 @@ const ListContactsTool = CreateXeroTool(
             contact.emailAddress
               ? `Email: ${contact.emailAddress}`
               : "No email",
+            ...(contact.phones ?? [])
+              .filter((phone) => phone.phoneNumber)
+              .map(
+                (phone) =>
+                  `Phone (${phone.phoneType}): ${[
+                    phone.phoneAreaCode,
+                    phone.phoneNumber,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}`,
+              ),
             contact.accountsReceivableTaxType
               ? `AR Tax Type: ${contact.accountsReceivableTaxType}`
               : null,
