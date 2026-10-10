@@ -22,6 +22,7 @@ async function createInvoice(
   date: string | undefined,
   lineAmountTypes: LineAmountTypes | undefined,
   dueDate: string | undefined,
+  brandingThemeId: string | undefined,
 ): Promise<Invoice | undefined> {
   await xeroClient.authenticate();
 
@@ -39,6 +40,8 @@ async function createInvoice(
         .split("T")[0], // Use the supplied due date, or 30 days from now
     // Left off when not supplied, so Xero applies its own default (Exclusive)
     ...(lineAmountTypes ? { lineAmountTypes } : {}),
+    // Left off when not supplied, so Xero applies the organisation's default theme
+    ...(brandingThemeId ? { brandingThemeID: brandingThemeId } : {}),
     ...(type === Invoice.TypeEnum.ACCPAY
       ? { invoiceNumber: reference }
       : { reference: reference }),
@@ -70,6 +73,7 @@ export async function createXeroInvoice(
   date?: string,
   lineAmountTypes?: LineAmountTypes,
   dueDate?: string,
+  brandingThemeId?: string,
 ): Promise<XeroClientResponse<Invoice>> {
   try {
     const createdInvoice = await createInvoice(
@@ -80,6 +84,7 @@ export async function createXeroInvoice(
       date,
       lineAmountTypes,
       dueDate,
+      brandingThemeId,
     );
 
     if (!createdInvoice) {

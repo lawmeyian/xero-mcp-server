@@ -60,8 +60,25 @@ amounts supplied already include tax.",
         "Optional due date (YYYY-MM-DD). Defaults to thirty days from today. \
 Set it explicitly where the customer has agreed different terms.",
       ),
+    brandingThemeId: z
+      .string()
+      .optional()
+      .describe(
+        "Optional branding theme ID, from the list-branding-themes tool. The theme \
+decides what the customer sees on the invoice, such as whether bank account details \
+are shown. Left off, Xero uses the organisation's default theme.",
+      ),
   },
-  async ({ contactId, lineItems, type, reference, date, lineAmountTypes, dueDate }) => {
+  async ({
+    contactId,
+    lineItems,
+    type,
+    reference,
+    date,
+    lineAmountTypes,
+    dueDate,
+    brandingThemeId,
+  }) => {
     const xeroInvoiceType = type === "ACCREC" ? Invoice.TypeEnum.ACCREC : Invoice.TypeEnum.ACCPAY;
     const result = await createXeroInvoice(
       contactId,
@@ -71,6 +88,7 @@ Set it explicitly where the customer has agreed different terms.",
       date,
       toInvoiceLineAmountTypes(lineAmountTypes),
       dueDate,
+      brandingThemeId,
     );
     if (result.isError) {
       return {

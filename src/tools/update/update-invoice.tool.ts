@@ -59,6 +59,13 @@ amounts already reduced to tax exclusive values, so if you re-send line items \
 read back from an INCLUSIVE invoice, re-enter the original tax inclusive \
 amounts rather than the ones Xero returned.",
       ),
+    brandingThemeId: z
+      .string()
+      .optional()
+      .describe(
+        "Optional branding theme ID, from the list-branding-themes tool. Left off, \
+the invoice keeps the theme it already has.",
+      ),
   },
   async (
     {
@@ -69,6 +76,7 @@ amounts rather than the ones Xero returned.",
       date,
       contactId,
       lineAmountTypes,
+      brandingThemeId,
     }: {
       invoiceId: string;
       lineItems?: Array<{
@@ -83,6 +91,7 @@ amounts rather than the ones Xero returned.",
       date?: string;
       contactId?: string;
       lineAmountTypes?: InvoiceLineAmountTypeName;
+      brandingThemeId?: string;
     },
     //_extra: { signal: AbortSignal },
   ) => {
@@ -94,6 +103,7 @@ amounts rather than the ones Xero returned.",
       date,
       contactId,
       toInvoiceLineAmountTypes(lineAmountTypes),
+      brandingThemeId,
     );
     if (result.isError) {
       return {
