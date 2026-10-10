@@ -71,6 +71,15 @@ supplied already include tax.",
       .string()
       .optional()
       .describe("Optional branding theme ID, from the list-branding-themes tool."),
+    approvedForSending: z
+      .boolean()
+      .optional()
+      .describe(
+        "True gives the template Xero's \"Approve for Sending\", so each generated invoice is \
+emailed to the customer with a PDF. Which email template it uses (Basic - Automatic when the \
+customer pays by card, Basic - Invoiced when they do not) is not in the API and must be chosen \
+in Xero afterwards.",
+      ),
     status: z
       .enum(["DRAFT", "AUTHORISED"])
       .optional()
@@ -93,6 +102,7 @@ template to start billing on its own.",
     lineAmountTypes,
     brandingThemeId,
     status,
+    approvedForSending,
   }) => {
     const result = await createXeroRepeatingInvoice(
       contactId,
@@ -114,6 +124,7 @@ template to start billing on its own.",
       reference,
       toInvoiceLineAmountTypes(lineAmountTypes),
       brandingThemeId,
+      approvedForSending,
     );
 
     if (result.isError) {
@@ -151,6 +162,9 @@ template to start billing on its own.",
             `Line amount types: ${repeatingInvoice?.lineAmountTypes}`,
             `Total: ${repeatingInvoice?.total}`,
             `Status: ${repeatingInvoice?.status}`,
+            repeatingInvoice?.approvedForSending
+              ? "Approved for sending. Set the email template (Basic - Automatic or Basic - Invoiced) in Xero."
+              : null,
             repeatingInvoice?.status === RepeatingInvoice.StatusEnum.DRAFT
               ? "This template is a draft, so it will not bill anyone until it is approved in Xero."
               : null,

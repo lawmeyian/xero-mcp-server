@@ -36,6 +36,7 @@ async function createRepeatingInvoice(
   reference: string | undefined,
   lineAmountTypes: LineAmountTypes | undefined,
   brandingThemeId: string | undefined,
+  approvedForSending: boolean | undefined,
 ): Promise<RepeatingInvoice | undefined> {
   await xeroClient.authenticate();
 
@@ -49,6 +50,13 @@ async function createRepeatingInvoice(
     // Both left off when not supplied, so Xero applies its own defaults
     ...(lineAmountTypes ? { lineAmountTypes } : {}),
     ...(brandingThemeId ? { brandingThemeID: brandingThemeId } : {}),
+    // "Approve for Sending" in Xero: the invoice is emailed when it generates.
+    // Which email template it uses (Basic - Automatic for a customer paying by
+    // card, Basic - Invoiced for one who is not) is NOT in the API, so that
+    // still has to be picked in Xero.
+    ...(approvedForSending
+      ? { approvedForSending: true, markAsSent: true, includePDF: true }
+      : {}),
   };
 
   const response = await xeroClient.accountingApi.createRepeatingInvoices(
@@ -73,6 +81,7 @@ export async function createXeroRepeatingInvoice(
   reference?: string,
   lineAmountTypes?: LineAmountTypes,
   brandingThemeId?: string,
+  approvedForSending?: boolean,
 ): Promise<XeroClientResponse<RepeatingInvoice>> {
   try {
     const created = await createRepeatingInvoice(
@@ -83,6 +92,7 @@ export async function createXeroRepeatingInvoice(
       reference,
       lineAmountTypes,
       brandingThemeId,
+      approvedForSending,
     );
 
     if (!created) {

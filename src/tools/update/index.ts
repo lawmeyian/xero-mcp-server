@@ -4,6 +4,7 @@ import UpdateBankTransactionTool from "./update-bank-transaction.tool.js";
 import UpdateContactTool from "./update-contact.tool.js";
 import UpdateCreditNoteTool from "./update-credit-note.tool.js";
 import UpdateInvoiceTool from "./update-invoice.tool.js";
+import UpdateRepeatingInvoiceTool from "./update-repeating-invoice.tool.js";
 import UpdateItemTool from "./update-item.tool.js";
 import AddTimesheetLineTool from "./update-payroll-timesheet-add-line.tool.js";
 import UpdatePayrollTimesheetLineTool
@@ -17,6 +18,7 @@ export const UpdateTools = [
   UpdateContactTool,
   UpdateCreditNoteTool,
   UpdateInvoiceTool,
+  UpdateRepeatingInvoiceTool,
   UpdateManualJournalTool,
   UpdateQuoteTool,
   UpdateItemTool,
