@@ -3,6 +3,10 @@ import { createXeroInvoice } from "../../handlers/create-xero-invoice.handler.js
 import { DeepLinkType, getDeepLink } from "../../helpers/get-deeplink.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { Invoice } from "xero-node";
+import {
+  invoiceLineAmountTypeNames,
+  toInvoiceLineAmountTypes,
+} from "../../helpers/to-invoice-line-amount-types.js";
 
 const trackingSchema = z.object({
   name: z.string().describe("The name of the tracking category. Can be obtained from the list-tracking-categories tool"),
@@ -41,10 +45,33 @@ const CreateInvoiceTool = CreateXeroTool(
       If the type is not specified, the default is ACCREC."),
     reference: z.string().describe("A reference number for the invoice.").optional(),
     date: z.string().describe("The date the invoice was created (YYYY-MM-DD format).").optional(),
+    lineAmountTypes: z
+      .enum(invoiceLineAmountTypeNames)
+      .optional()
+      .describe(
+        "Optional line amount types (EXCLUSIVE, INCLUSIVE, NO_TAX). Xero treats \
+unit amounts as tax exclusive when this is omitted, so pass INCLUSIVE when the \
+amounts supplied already include tax.",
+      ),
+    dueDate: z
+      .string()
+      .optional()
+      .describe(
+        "Optional due date (YYYY-MM-DD). Defaults to thirty days from today. \
+Set it explicitly where the customer has agreed different terms.",
+      ),
   },
-  async ({ contactId, lineItems, type, reference, date }) => {
+  async ({ contactId, lineItems, type, reference, date, lineAmountTypes, dueDate }) => {
     const xeroInvoiceType = type === "ACCREC" ? Invoice.TypeEnum.ACCREC : Invoice.TypeEnum.ACCPAY;
-    const result = await createXeroInvoice(contactId, lineItems, xeroInvoiceType, reference, date);
+    const result = await createXeroInvoice(
+      contactId,
+      lineItems,
+      xeroInvoiceType,
+      reference,
+      date,
+      toInvoiceLineAmountTypes(lineAmountTypes),
+      dueDate,
+    );
     if (result.isError) {
       return {
         content: [
@@ -75,6 +102,8 @@ const CreateInvoiceTool = CreateXeroTool(
             `Contact: ${invoice?.contact?.name}`,
             `Type: ${invoice?.type}`,
             `Date: ${invoice?.date}`,
+            `Due date: ${invoice?.dueDate}`,
+            `Line amount types: ${invoice?.lineAmountTypes}`,
             `Total: ${invoice?.total}`,
             `Status: ${invoice?.status}`,
             deepLink ? `Link to view: ${deepLink}` : null,

@@ -1,7 +1,7 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
-import { Invoice, LineItemTracking } from "xero-node";
+import { Invoice, LineAmountTypes, LineItemTracking } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 interface InvoiceLineItem {
@@ -35,6 +35,7 @@ async function updateInvoice(
   dueDate?: string,
   date?: string,
   contactId?: string,
+  lineAmountTypes?: LineAmountTypes,
 ): Promise<Invoice | undefined> {
   const invoice: Invoice = {
     lineItems: lineItems,
@@ -42,6 +43,7 @@ async function updateInvoice(
     dueDate: dueDate,
     date: date,
     contact: contactId ? { contactID: contactId } : undefined,
+    lineAmountTypes: lineAmountTypes,
   };
 
   const response = await xeroClient.accountingApi.updateInvoice(
@@ -68,6 +70,7 @@ export async function updateXeroInvoice(
   dueDate?: string,
   date?: string,
   contactId?: string,
+  lineAmountTypes?: LineAmountTypes,
 ): Promise<XeroClientResponse<Invoice>> {
   try {
     const existingInvoice = await getInvoice(invoiceId);
@@ -83,6 +86,17 @@ export async function updateXeroInvoice(
       };
     }
 
+    // On an update that touches no line items, carry the invoice's own setting
+    // forward so Xero cannot quietly reset it to Exclusive.
+    //
+    // When line items ARE supplied, send only what the caller asked for. Xero
+    // returns line items with their unit amounts already reduced to tax
+    // exclusive values, so forcing INCLUSIVE onto amounts that were read back
+    // from Xero would strip the tax a second time.
+    const resolvedLineAmountTypes =
+      lineAmountTypes ??
+      (lineItems ? undefined : existingInvoice?.lineAmountTypes);
+
     const updatedInvoice = await updateInvoice(
       invoiceId,
       lineItems,
@@ -90,6 +104,7 @@ export async function updateXeroInvoice(
       dueDate,
       date,
       contactId,
+      resolvedLineAmountTypes,
     );
 
     if (!updatedInvoice) {

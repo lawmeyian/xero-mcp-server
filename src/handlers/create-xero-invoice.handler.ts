@@ -1,7 +1,7 @@
 import { xeroClient } from "../clients/xero-client.js";
 import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
-import { Invoice, LineItemTracking } from "xero-node";
+import { Invoice, LineAmountTypes, LineItemTracking } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 interface InvoiceLineItem {
@@ -20,6 +20,8 @@ async function createInvoice(
   type: Invoice.TypeEnum,
   reference: string | undefined,
   date: string | undefined,
+  lineAmountTypes: LineAmountTypes | undefined,
+  dueDate: string | undefined,
 ): Promise<Invoice | undefined> {
   await xeroClient.authenticate();
 
@@ -30,9 +32,13 @@ async function createInvoice(
     },
     lineItems: lineItems,
     date: date || new Date().toISOString().split("T")[0], // Use provided date or today's date
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .split("T")[0], // 30 days from now
+    dueDate:
+      dueDate ||
+      new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0], // Use the supplied due date, or 30 days from now
+    // Left off when not supplied, so Xero applies its own default (Exclusive)
+    ...(lineAmountTypes ? { lineAmountTypes } : {}),
     ...(type === Invoice.TypeEnum.ACCPAY
       ? { invoiceNumber: reference }
       : { reference: reference }),
@@ -62,6 +68,8 @@ export async function createXeroInvoice(
   type: Invoice.TypeEnum = Invoice.TypeEnum.ACCREC,
   reference?: string,
   date?: string,
+  lineAmountTypes?: LineAmountTypes,
+  dueDate?: string,
 ): Promise<XeroClientResponse<Invoice>> {
   try {
     const createdInvoice = await createInvoice(
@@ -70,6 +78,8 @@ export async function createXeroInvoice(
       type,
       reference,
       date,
+      lineAmountTypes,
+      dueDate,
     );
 
     if (!createdInvoice) {
