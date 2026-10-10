@@ -156,3 +156,43 @@ describe("formatError", () => {
     });
   });
 });
+
+describe("formatError with the SDK's stringified rejections", () => {
+  it("reads the validation errors out of a JSON string rejection", () => {
+    const rejection = JSON.stringify({
+      response: {
+        statusCode: 400,
+        body: {
+          httpStatusCode: "BadRequest",
+          Elements: [
+            {
+              ValidationErrors: [{ Message: "Start date cannot be in the past" }],
+            },
+          ],
+        },
+        request: { headers: { authorization: "Bearer super-secret-token" } },
+      },
+      body: {},
+    });
+
+    const formatted = formatError(rejection);
+
+    expect(formatted).toContain("Start date cannot be in the past");
+    expect(formatted).not.toContain("super-secret-token");
+  });
+
+  it("never echoes a JSON payload it cannot read, because it carries the token", () => {
+    const rejection = JSON.stringify({
+      something: "else",
+      request: { headers: { authorization: "Bearer super-secret-token" } },
+    });
+
+    expect(formatError(rejection)).not.toContain("super-secret-token");
+  });
+
+  it("still refuses to echo a plain string", () => {
+    expect(formatError("Something went wrong")).toBe(
+      "An unexpected error occurred while communicating with Xero.",
+    );
+  });
+});

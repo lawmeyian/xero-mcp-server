@@ -12,7 +12,8 @@ interface XeroValidationError {
 
 interface XeroSdkError {
   response: {
-    statusCode: number;
+    statusCode?: number;
+    status?: number;
     body?: {
       httpStatusCode?: string;
       problem?: XeroSdkProblem;
@@ -45,7 +46,15 @@ function isXeroSdkError(error: unknown): error is XeroSdkError {
   if (typeof error !== "object" || error === null) return false;
   const response = (error as { response?: unknown }).response;
   if (typeof response !== "object" || response === null) return false;
-  return typeof (response as { statusCode?: unknown }).statusCode === "number";
+  // Some SDK calls reject with the raw AxiosResponse, which carries `status`
+  // rather than `statusCode`. Without this the real reason Xero rejected the
+  // document is dropped and the caller is told only that something unexpected
+  // happened.
+  const withStatus = response as { statusCode?: unknown; status?: unknown };
+  return (
+    typeof withStatus.statusCode === "number" ||
+    typeof withStatus.status === "number"
+  );
 }
 
 function formatHttpStatus(status: number): string {
@@ -63,15 +72,33 @@ function formatHttpStatus(status: number): string {
   }
 }
 
+function parseSdkErrorString(error: string): unknown {
+  try {
+    return JSON.parse(error);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Format error messages for return to the LLM.
  *
  * Never stringify unknown error objects — the xero-node SDK rejects with a
- * plain object whose `request.headers.authorization` field contains the
- * caller's Bearer token. Whitelist the fields we extract so secrets never
- * reach the response.
+ * payload whose `request.headers.authorization` field contains the caller's
+ * Bearer token. Whitelist the fields we extract so secrets never reach the
+ * response.
  */
 export function formatError(error: unknown): string {
+  if (typeof error === "string") {
+    const parsed = parseSdkErrorString(error);
+    if (isXeroSdkError(parsed)) {
+      return formatError(parsed);
+    }
+    // Never hand the string back: when it is the SDK's payload it carries the
+    // bearer token, and an arbitrary string is not ours to echo either.
+    return "An unexpected error occurred while communicating with Xero.";
+  }
+
   if (error instanceof AxiosError) {
     const status = error.response?.status;
     const detail = error.response?.data?.Detail;
@@ -84,17 +111,17 @@ export function formatError(error: unknown): string {
   }
 
   if (isXeroSdkError(error)) {
-    const status = error.response.statusCode;
+    const status = error.response.statusCode ?? error.response.status ?? 0;
     const mapped = formatHttpStatus(status);
     if (mapped) return mapped;
 
-    const body = error.response.body;
+    const body = error.response.body ?? (error as { body?: XeroSdkError["response"]["body"] }).body;
     const problem = body?.problem;
     const title = problem?.title ?? body?.httpStatusCode ?? "HTTP error";
     const detail =
       problem?.detail ??
       body?.Detail ??
-      collectValidationErrors(body) ??
+      (collectValidationErrors(body) || undefined) ??
       body?.Message;
     return detail ? `${status} ${title}: ${detail}` : `${status} ${title}`;
   }
